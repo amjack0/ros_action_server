@@ -1,0 +1,10 @@
+#goal
+Header header
+std_msgs/Float64MultiArray tau
+duration time_from_start
+---
+#result
+string status
+---
+#feedback
+std_msgs/Float64MultiArray error
