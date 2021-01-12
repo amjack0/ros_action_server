@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  kdl_parser
 )
 
 find_package(orocos_kdl REQUIRED)
@@ -32,6 +33,12 @@ IF (Eigen3_FOUND)
     link_directories(${Eigen3_LIBRARY_DIRS})
 ENDIF()
 link_directories(/usr/local/include)
+
+add_message_files(
+  DIRECTORY
+  msg
+  FILES
+  tau.msg)
 
 ## Generate actions in the 'action' folder
 add_action_files(
@@ -66,4 +73,5 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
    ${orocos_kdl_LIBRARIES}
-   Eigen3::Eigen)
+   Eigen3::Eigen
+   ${kdl_parser_LIBRARIES})

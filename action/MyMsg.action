@@ -1,6 +1,7 @@
 #goal
 Header header
-std_msgs/Float64MultiArray tau
+ros_action_server/tau[] trajectory
+
 duration time_from_start
 ---
 #result
