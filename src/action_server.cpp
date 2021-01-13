@@ -6,6 +6,7 @@
 #include <array>
 #include <Eigen/Eigen>
 #include <mutex>
+#include <chrono>
 
 /* ros msgs */
 #include "std_msgs/Empty.h"
@@ -27,6 +28,7 @@
 #include <kdl/frames.hpp>
 
 using namespace std;
+using namespace std::chrono;
 #define N_JOINT 6
 
 
@@ -109,8 +111,8 @@ private:
     jointPosCurrent.resize(N_JOINT), jointVelCurrent.resize(N_JOINT), jointEffort.resize(N_JOINT);
     q_cur.resize(N_JOINT,1); qdot_cur.resize(N_JOINT,1);
     map_joint_states={2, 1, 0, 3, 4, 5};      // to read joint_states in order
-    k_p={16, 16, 16,  10,  10,  10};          // specify p and d gains
-    k_d={5, 5, 5,  6,  6,  6};
+    k_p={26, 85, 80,  12,  12,  12};          // specify p and d gains
+    k_d={10, 12, 12,  6,  6,  6};
     // BEGIN
     float mass = 5 ; double Ixx, Iyy, Izz; double l= 0.08, r = l/2.0; // from URDF
 
@@ -155,7 +157,7 @@ private:
 
   void initializeSubscribers(void)
   {
-    pos_sub = nh.subscribe("/joint_states", 100, &MoveRobotAction::subscriberCb, this);  //TODO:  1
+    pos_sub = nh.subscribe("/joint_states", 100, &MoveRobotAction::subscriberCb, this);  // 1
     ROS_INFO("[AS] Subscriber Initialized");
   }
 
@@ -192,7 +194,7 @@ private:
 
       //cout << "[AS] position: " <<  pos_info.position[l] << endl;
     }
-    ROS_INFO("[AS] Reading joint_states");
+    //ROS_INFO("[AS] Reading joint_states");
   }
 
   // function to calculate the tau error and decides the feedback
@@ -201,10 +203,12 @@ private:
   {
     std_msgs::Float64MultiArray err;
     err.data.resize(N_JOINT);
+    //cout << "[AS] position error:" << endl;
 
-      for(short int l=0; l< N_JOINT; l++){    //msg2->goal[k].q.data[l]
-        //err.data[l] = abs( goal->trajectory[k].angle_goal.data[l] )  - abs( current.effort[l] );
-        err.data[l] = abs( arr.data[l] ) - abs( current.effort[l] ); // error = desired - current
+      for(short int l=0; l< N_JOINT; l++){
+        //err.data[l] = abs( arr.data[l] ) - abs( current.effort[l] ); // error = desired - current
+        err.data[l] = abs( arr.data[l] ) - abs( current.position[l] ); // position
+        //cout << "[" << l << "]: "<< abs (err.data[l]) << endl;
       }
 
     return err;
@@ -215,7 +219,8 @@ private:
 
   void actionCb(const ros_action_server::MyMsgGoalConstPtr &goal)
   {
-    ros::Rate rate(50); //50
+    ros::Rate rate(35); //50
+    auto start = high_resolution_clock::now(); // start clock
     bool success = true;
     ROS_INFO("[AS] executing the action call_back");
 
@@ -226,7 +231,7 @@ private:
     std::vector<std_msgs::Float64> msg_(N_JOINT);
     std::vector<std_msgs::Float64> msg_error(12);
     Eigen::MatrixXf position_error(N_JOINT,1);  Eigen::MatrixXf velocity_error(N_JOINT,1);
-    //std::vector<std_msgs::Float64> desired_tau(N_JOINT);
+
     std_msgs::Float64 a;
     std_msgs::Float64MultiArray q_des; q_des.data.resize(N_JOINT);
     std_msgs::Float64 b;
@@ -236,6 +241,8 @@ private:
 
 
     for(short int k = 0; k < goal->trajectory.size() ; k++){
+
+      auto start_time = goal->trajectory[k].time_from_start;
 
       for (short int j = 0; j < N_JOINT; j++){
         a.data=static_cast<float>(goal->trajectory[k].angle_goal.data[j]);
@@ -247,7 +254,7 @@ private:
         v.data=static_cast<float>(goal->trajectory[k].acc_goal.data[j]);
         qddot_des.data[j] = v.data;
       }
-      //m1.try_lock();//calculations see if Mutex Lock is required
+      ///m1.try_lock();//calculations see if Mutex Lock is required
       dyn_param.JntToMass(jointPosCurrent, M);
       dyn_param.JntToGravity(jointPosCurrent, gravity);
       dyn_param.JntToCoriolis(jointPosCurrent, jointVelCurrent, C);
@@ -256,7 +263,7 @@ private:
 
         c(i,0) = C(i);
         g(i,0) = gravity(i);
-        qdotdot_k(i,0)=k_p[i]*(q_des.data[i]-q_cur(i,0))+k_d[i]*(qdot_des.data[i]-qdot_cur(i,0));
+        qdotdot_k(i,0)=k_p[i]*(q_des.data[i]-q_cur(i,0))+k_d[i]*(qdot_des.data[i]-qdot_cur(i,0)) + qddot_des.data[i];
 
         position_error(i,0) = q_des.data[i] ;//-q_cur(i,0);
         velocity_error(i,0) = qdot_des.data[i];//-qdot_cur(i,0);
@@ -267,7 +274,7 @@ private:
 
       tau = M_ * qdotdot_k + c + g;
 
-      cout << "Applid tau: " << tau.transpose() << ", Current tau:" << jointEffort.data.transpose() << endl;
+      //cout << "Applid tau: " << tau.transpose() << ", Current tau:" << jointEffort.data.transpose() << endl;
 
       for (short int j = 0; j < N_JOINT; j++)
       {
@@ -291,9 +298,10 @@ private:
           arr.data[j] = tau(j,0);
         }
 
-        arm_pub.publish(arr); //goal->header.stamp;
+        goal->trajectory[k].header.stamp ;
+        arm_pub.publish(arr); // header.stamp = Now() + start_time ;
         feedback.error.data.resize(N_JOINT);
-        feedback.error = calError(pos_info, arr); // check if pos_info is updated
+        feedback.error = calError(pos_info, q_des); // TODO: torque arr  <<< check if pos_info is updated
         action_server.publishFeedback(feedback);
 
         if( action_server.isPreemptRequested() || !ros::ok() ) // take care of preemption
@@ -315,9 +323,12 @@ private:
       }
 
       // TODO: set the goal tolerance
-      while ( abs(feedback.error.data[0]) > 40 || abs(feedback.error.data[1]) > 40 || abs(feedback.error.data[2]) > 40 || abs(feedback.error.data[3]) > 40 || abs(feedback.error.data[4]) > 40 || abs(feedback.error.data[5]) > 40 );
-      //m1.unlock();
+      while ( abs(feedback.error.data[0]) > 5 || abs(feedback.error.data[1]) > 5 || abs(feedback.error.data[2]) > 5 || abs(feedback.error.data[3]) > 5 || abs(feedback.error.data[4]) > 5 || abs(feedback.error.data[5]) > 5 );
+      ///m1.unlock();
     } //! for loop
+    auto stop = high_resolution_clock::now(); // stop clock (for entire trajectory)
+    auto duration = duration_cast<milliseconds>(stop - start);
+    cout << "[JS] Duration in milli-seconds: " << duration.count() << endl;
 
     // check if succeeded--yes-->return result
     if(success)
@@ -334,7 +345,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "action_server");
   MoveRobotAction robot("trajectory_action");
-  ros::Rate rate(50);     // 15,   10
+  ros::Rate rate(35);     // 15,   10
 
   while (ros::ok())
   {

@@ -2,7 +2,6 @@
 Header header
 ros_action_server/tau[] trajectory
 
-duration time_from_start
 ---
 #result
 string status

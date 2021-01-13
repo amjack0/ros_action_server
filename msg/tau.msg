@@ -2,3 +2,4 @@ Header header
 std_msgs/Float64MultiArray angle_goal
 std_msgs/Float64MultiArray vel_goal
 std_msgs/Float64MultiArray acc_goal
+duration time_from_start
