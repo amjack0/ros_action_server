@@ -5,7 +5,6 @@
 #include "math.h"
 #include <array>
 #include <Eigen/Eigen>
-#include <mutex>
 #include <chrono>
 
 /* ros msgs */
@@ -61,7 +60,6 @@ protected:
   Eigen::MatrixXf q_cur, qdot_cur;
   std::array<float, N_JOINT> k_p;
   std::array<float, N_JOINT> k_d;
-  mutex m1;
 
 public:
   //constructor
@@ -220,7 +218,6 @@ private:
   void actionCb(const ros_action_server::MyMsgGoalConstPtr &goal)
   {
     ros::Rate rate(35); //50
-    auto start = high_resolution_clock::now(); // start clock
     bool success = true;
     ROS_INFO("[AS] executing the action call_back");
 
@@ -239,22 +236,24 @@ private:
     std_msgs::Float64 v;
     std_msgs::Float64MultiArray qddot_des ; qddot_des.data.resize(N_JOINT);
 
+    //for(short int k = 0; k < goal->trajectory.size() ; k++){
 
-    for(short int k = 0; k < goal->trajectory.size() ; k++){
+    std_msgs::Int64 waypoint;
+    waypoint.data = goal->index.data;
 
-      auto start_time = goal->trajectory[k].time_from_start;
+    auto start_time = goal->trajectory[waypoint.data].time_from_start;
 
       for (short int j = 0; j < N_JOINT; j++){
-        a.data=static_cast<float>(goal->trajectory[k].angle_goal.data[j]);
+        a.data=static_cast<float>(goal->trajectory[waypoint.data].angle_goal.data[j]);
         q_des.data[j] = a.data;
 
-        b.data=static_cast<float>(goal->trajectory[k].vel_goal.data[j]);
+        b.data=static_cast<float>(goal->trajectory[waypoint.data].vel_goal.data[j]);
         qdot_des.data[j] = b.data;
 
-        v.data=static_cast<float>(goal->trajectory[k].acc_goal.data[j]);
+        v.data=static_cast<float>(goal->trajectory[waypoint.data].acc_goal.data[j]);
         qddot_des.data[j] = v.data;
       }
-      ///m1.try_lock();//calculations see if Mutex Lock is required
+
       dyn_param.JntToMass(jointPosCurrent, M);
       dyn_param.JntToGravity(jointPosCurrent, gravity);
       dyn_param.JntToCoriolis(jointPosCurrent, jointVelCurrent, C);
@@ -294,14 +293,14 @@ private:
       {
         std_msgs::Float64MultiArray arr ; arr.data.resize(N_JOINT);
         for (short int j = 0; j < N_JOINT; j++){
-          //cout << "[AS] recieved from client: " << arr.data[j] << endl;
           arr.data[j] = tau(j,0);
         }
 
-        goal->trajectory[k].header.stamp ;
-        arm_pub.publish(arr); // header.stamp = Now() + start_time ;
+        //goal->trajectory[waypoint.data].header.stamp ;
+        // header.stamp = goal->trajectory.header + start_time ;
+        arm_pub.publish(arr);
         feedback.error.data.resize(N_JOINT);
-        feedback.error = calError(pos_info, q_des); // TODO: torque arr  <<< check if pos_info is updated
+        feedback.error = calError(pos_info, q_des); // TODO: torque arr
         action_server.publishFeedback(feedback);
 
         if( action_server.isPreemptRequested() || !ros::ok() ) // take care of preemption
@@ -324,11 +323,7 @@ private:
 
       // TODO: set the goal tolerance
       while ( abs(feedback.error.data[0]) > 5 || abs(feedback.error.data[1]) > 5 || abs(feedback.error.data[2]) > 5 || abs(feedback.error.data[3]) > 5 || abs(feedback.error.data[4]) > 5 || abs(feedback.error.data[5]) > 5 );
-      ///m1.unlock();
-    } //! for loop
-    auto stop = high_resolution_clock::now(); // stop clock (for entire trajectory)
-    auto duration = duration_cast<milliseconds>(stop - start);
-    cout << "[JS] Duration in milli-seconds: " << duration.count() << endl;
+    //} //! for loop
 
     // check if succeeded--yes-->return result
     if(success)
@@ -345,7 +340,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "action_server");
   MoveRobotAction robot("trajectory_action");
-  ros::Rate rate(35);     // 15,   10
+  ros::Rate rate(35); //50
 
   while (ros::ok())
   {
