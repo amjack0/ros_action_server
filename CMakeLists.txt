@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   kdl_parser
+  dynamic_reconfigure
 )
 
 find_package(orocos_kdl REQUIRED)
@@ -52,6 +53,9 @@ generate_messages(
    actionlib_msgs sensor_msgs std_msgs
 )
 
+generate_dynamic_reconfigure_options(
+  cfg/Pid.cfg)
+
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ros_action_server
@@ -67,7 +71,7 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/action_server.cpp)
 ##add_executable(${PROJECT_NAME}_node src/ros_action_server_node.cpp)
 
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node

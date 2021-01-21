@@ -2,6 +2,7 @@
 Header header
 ros_action_server/tau[] trajectory
 std_msgs/Int64 index
+bool finished
 ---
 #result
 string status

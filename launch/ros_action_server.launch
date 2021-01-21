@@ -1,6 +1,8 @@
 <launch>
   <node name="jointspace" pkg="jointspace" type="jointspace_node" output="screen"/>
   <node name="rqt_multiplot" pkg="rqt_multiplot" type="rqt_multiplot" />
+  <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" />
   <node name="ros_action_server" pkg="ros_action_server" type="ros_action_server_node" output="screen"/>
+
   <!--node pkg="rosservice" type="rosservice" name="rosservice" args="call /gazebo/reset_simulation"/-->
 </launch>
