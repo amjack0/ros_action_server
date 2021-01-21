@@ -308,7 +308,7 @@ private:
       g(i,0) = gravity(i);
       qdotdot_k(i,0)=k_p[i]*(q_des.data[i]-q_cur(i,0))+k_d[i]*(qdot_des.data[i]-qdot_cur(i,0)) + qddot_des.data[i];
 
-      position_error(i,0) = q_cur(i,0); // TODO q_des.data[i] ;
+      position_error(i,0) = q_des.data[i];
       velocity_error(i,0) = qdot_des.data[i];//-qdot_cur(i,0);
 
       for(int j = 0; j < N_JOINT; j++){

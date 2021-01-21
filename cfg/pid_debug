@@ -1,0 +1,39 @@
+!!python/object/new:dynamic_reconfigure.encoding.Config
+dictitems:
+  d0: 16.0
+  d1: 12.0
+  d2: 12.0
+  d3: 32.0
+  d4: 8.0
+  d5: 40.0
+  groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+    dictitems:
+      d0: 16.0
+      d1: 12.0
+      d2: 12.0
+      d3: 32.0
+      d4: 8.0
+      d5: 40.0
+      groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      id: 0
+      name: Default
+      p0: 80.0
+      p1: 184.0
+      p2: 80.0
+      p3: 408.0
+      p4: 256.0
+      p5: 664.0
+      parameters: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      parent: 0
+      state: true
+      type: ''
+    state: []
+  p0: 80.0
+  p1: 184.0
+  p2: 80.0
+  p3: 408.0
+  p4: 256.0
+  p5: 664.0
+state: []
