@@ -309,7 +309,7 @@ private:
       qdotdot_k(i,0)=k_p[i]*(q_des.data[i]-q_cur(i,0))+k_d[i]*(qdot_des.data[i]-qdot_cur(i,0)) + qddot_des.data[i];
 
       position_error(i,0) = q_des.data[i];
-      velocity_error(i,0) = qdot_des.data[i];//-qdot_cur(i,0);
+      velocity_error(i,0) = qdot_des.data[i];
 
       for(int j = 0; j < N_JOINT; j++){
         M_(i,j) = M(i,j);
